@@ -26,7 +26,7 @@ export const signup = async (req, res) => {
         if (!newUser) {
             return res.status(400).json({ message: "User not created" });
         }
-        
+
         generateToken(newUser._id, res);
         await newUser.save();
         res.status(201).json(
@@ -43,11 +43,49 @@ export const signup = async (req, res) => {
     }
 }
 
-export const login = (req, res) => {
-    req.send("login route");
+export const login = async (req, res) => {
+    const {email, password} = req.body;
+    try {
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+        if (!password) {
+            return res.status(400).json({ message: "Password is required" });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid creditialsF" });
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password, user.password);
+        if (!isPasswordCorrect) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+        generateToken(user._id, res);
+
+        res.status(200).json({
+            _id: user._id,
+            fullname: user.fullname,
+            email: user.email,
+            profilePic: user.profilePic
+        })
+
+    } catch (error) {
+        console.log("Error in login controller", error.message);
+        return res.status(500).json({ message: "Internal server error while logging" });
+    }
 }
 
 export const logout = (req, res) => {
-    req.send("logout route");
+    try {
+        res.cookie("jwt", "", { maxAge: 0 });
+        res.status(200).json({ message: "Logout Successfully" });
+
+    } catch (error) {
+        console.log("Error in logout controller", error.message);
+        return res.status(500).json({ message: "Internal Server Error while log out" });
+
+    }
 }
 
