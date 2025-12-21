@@ -44,7 +44,7 @@ export const signup = async (req, res) => {
 }
 
 export const login = async (req, res) => {
-    const {email, password} = req.body;
+    const { email, password } = req.body;
     try {
         if (!email) {
             return res.status(400).json({ message: "Email is required" });
@@ -87,5 +87,9 @@ export const logout = (req, res) => {
         return res.status(500).json({ message: "Internal Server Error while log out" });
 
     }
+}
+
+export const updateProfile = async (req, res) => {
+    
 }
 
