@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore.js';
-import { MessageSquare, User, Mail, Lock, EyeOff, Eye } from "lucide-react"
+import { MessageSquare, User, Mail, Lock, EyeOff, Eye, Loader2 } from "lucide-react"
+import { Link } from "react-router-dom";
+import AuthImagePattern from "../components/AuthImagePattern.jsx"
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -45,7 +47,7 @@ const SignUpPage = () => {
                 <input
                   type="text"
                   className={`input input-bordered w-full pl-10`}
-                  placeholder='Josh Goodman'
+                  placeholder='Name Surname'
                   value={formData.fullname}
                   onChange={(e) => setFormData({ ...formData, fullname: e.target.value })}
                 />
@@ -100,10 +102,38 @@ const SignUpPage = () => {
               </div>
             </div>
 
+            <button
+              type='submit'
+              className='btn btn-primary w-full'
+              disabled={isSigningUp}
+            >
+              {isSigningUp ? (
+                <>
+                  <Loader2 className='size-5 animate-spin' />
+                  Loading...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </button>
           </form>
-
+          <div className='text-center'>
+            <p className='text-base-content/60'>
+              Already have an account?{" "}
+              <Link to="/login" className="link link-primary">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
+      {/* right side */}
+      <AuthImagePattern
+        title="Join our community"
+        subtitle="Connect with friends, share moments and stay in touch with your loved ones."
+      />
+
+
     </div>
   )
 }
