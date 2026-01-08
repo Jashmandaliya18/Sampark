@@ -7,11 +7,15 @@ const app = express();
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
-    cors: {
-        origin: ["http://localhost:5173"],
-    }
-})
+io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:5173",
+      "https://sampark-kappa.vercel.app"
+    ],
+    credentials: true,
+  }
+});
 
 export function getReceiverSocketId(userId) {
     return userSocketMap[userId];
