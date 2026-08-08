@@ -36,6 +36,7 @@ export const signup = async (req, res) => {
                 fullname: newUser.fullname,
                 email: newUser.email,
                 profilePic: newUser.profilePic,
+                createdAt: newUser.createdAt,
             }
         )
     } catch (error) {
@@ -56,7 +57,7 @@ export const login = async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Invalid creditialsF" });
+            return res.status(400).json({ message: "Invalid credentials" });
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
@@ -69,12 +70,13 @@ export const login = async (req, res) => {
             _id: user._id,
             fullname: user.fullname,
             email: user.email,
-            profilePic: user.profilePic
+            profilePic: user.profilePic,
+            createdAt: user.createdAt,
         })
 
     } catch (error) {
         console.log("Error in login controller", error.message);
-        return res.status(500).json({ message: "Internal server error while logging" });
+        return res.status(500).json({ message: "Internal server error while logging in" });
     }
 }
 
@@ -94,7 +96,6 @@ export const updateProfile = async (req, res) => {
     try {
         const { profilePic } = req.body;
         const userId = req.user._id;
-        console.log("PROFILE PIC RECEIVED:", profilePic ? "YES" : "NO");
 
         if (!profilePic) {
             return res.status(400).json({ message: "ProfilePic is required" });
@@ -104,7 +105,6 @@ export const updateProfile = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(userId, { profilePic: uploadResponce.secure_url }, { new: true });
 
         res.status(200).json(updatedUser);
-
 
     } catch (error) {
         console.log("Error while updating profile", error.message);
@@ -122,4 +122,3 @@ export const checkauth = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error while Check UserAuth" });
     }
 }
-

@@ -9,6 +9,7 @@ export const useAuthStore = create((set, get) => ({
     authUser: null,
     isSigningUp: false,
     isLoggingIn: false,
+    isLoggingOut: false,
     isUpdatingProfile: false,
     isCheckingAuth: true,
     onlineUsers: [],
@@ -56,6 +57,7 @@ export const useAuthStore = create((set, get) => ({
     },
 
     logout: async () => {
+        set({ isLoggingOut: true });
         try {
             await axiosInstance.post("/auth/logout");
             set({ authUser: null });
@@ -63,6 +65,8 @@ export const useAuthStore = create((set, get) => ({
             get().disconnectSocket();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Logout failed");
+        } finally {
+            set({ isLoggingOut: false });
         }
     },
 

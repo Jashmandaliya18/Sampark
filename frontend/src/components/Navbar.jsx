@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Settings, User, LogOut } from "lucide-react";
+import { MessageSquare, Settings, User, LogOut, Loader2 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 
 const Navbar = () => {
-    const { authUser, logout } = useAuthStore();
+    const { authUser, logout, isLoggingOut } = useAuthStore();
 
     return (
-        <header className="fixed top-0 z-40 w-full border-b border-base-300 bg-base-100/80 backdrop-blur-lg">
+        <header className="fixed top-0 z-40 w-full border-b border-base-300 bg-base-100/80 backdrop-blur-lg select-none">
             <div className="container mx-auto h-16 px-4">
                 <div className="flex h-full items-center justify-between">
                     {/* LEFT */}
@@ -37,11 +37,16 @@ const Navbar = () => {
                                 </Link>
                                 <button
                                     onClick={logout}
-                                    className="flex items-center gap-2 text-base-content hover:text-error transition-colors cursor-pointer"
+                                    disabled={isLoggingOut}
+                                    className="flex items-center gap-2 text-base-content hover:text-error transition-colors cursor-pointer disabled:opacity-50"
                                     title="Logout"
                                 >
-                                    <LogOut className="h-4 w-4 cursor-pointer" />
-                                    <span className="cursor-pointer">Logout</span>
+                                    {isLoggingOut ? (
+                                        <Loader2 className="h-4 w-4 animate-spin cursor-pointer" />
+                                    ) : (
+                                        <LogOut className="h-4 w-4 cursor-pointer" />
+                                    )}
+                                    <span className="cursor-pointer">{isLoggingOut ? "Logging out..." : "Logout"}</span>
                                 </button>
                             </>
                         )}

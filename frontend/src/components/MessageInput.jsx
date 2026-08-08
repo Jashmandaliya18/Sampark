@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useChatStore } from '../store/useChatStore.js';
-import { X, Image, Send, Smile } from 'lucide-react';
+import { X, Image, Send, Smile, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 
@@ -8,6 +8,8 @@ const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const emojiButtonRef = useRef(null);
@@ -55,8 +57,9 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!text.trim() && !imagePreview) return;
+    if ((!text.trim() && !imagePreview) || isSending) return;
 
+    setIsSending(true);
     try {
       await sendMessages({ text: text.trim(), image: imagePreview });
 
@@ -67,6 +70,8 @@ const MessageInput = () => {
 
     } catch (error) {
       toast.error("Failed to send message: " + (error?.message || error));
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -97,9 +102,10 @@ const MessageInput = () => {
               alt="Preview"
               className='size-20 object-cover rounded-lg border border-zinc-700 cursor-pointer' />
             <button
-              className='absolute -top-1.5 -right-1.5 size-5 rounded-full bg-base-300 flex items-center justify-center cursor-pointer hover:bg-base-100 transition'
+              className='absolute -top-1.5 -right-1.5 size-5 rounded-full bg-base-300 flex items-center justify-center cursor-pointer hover:bg-base-100 transition disabled:opacity-50'
               onClick={removeImage}
               type='button'
+              disabled={isSending}
               title="Remove image"
             >
               <X className='size-3 cursor-pointer' />
@@ -114,7 +120,8 @@ const MessageInput = () => {
           <button
             ref={emojiButtonRef}
             type="button"
-            className={`absolute left-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle transition cursor-pointer ${
+            disabled={isSending}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle transition cursor-pointer disabled:opacity-50 ${
               showEmojiPicker ? 'text-primary' : 'text-base-content/40 hover:text-base-content/80'
             }`}
             onClick={() => setShowEmojiPicker((prev) => !prev)}
@@ -125,10 +132,11 @@ const MessageInput = () => {
 
           <input
             type="text"
-            className="w-full pl-12 pr-20 py-3 rounded-xl bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 caret-base-content/80 focus:outline-none focus:border-base-content/25 focus:bg-base-200 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition cursor-text"
-            placeholder="Type a message..."
+            className="w-full pl-12 pr-20 py-3 rounded-xl bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 caret-base-content/80 focus:outline-none focus:border-base-content/25 focus:bg-base-200 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition cursor-text disabled:opacity-50"
+            placeholder={isSending ? "Sending message..." : "Type a message..."}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            disabled={isSending}
           />
 
           <input
@@ -137,26 +145,32 @@ const MessageInput = () => {
             className='hidden'
             ref={fileInputRef}
             onChange={handleImageChange}
+            disabled={isSending}
           />
 
           {/* Image Button (inside input on right side) */}
           <button
             type="button"
-            className="absolute right-12 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-base-content/40 hover:text-base-content/80 transition cursor-pointer"
+            disabled={isSending}
+            className="absolute right-12 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-base-content/40 hover:text-base-content/80 transition cursor-pointer disabled:opacity-50"
             onClick={() => fileInputRef.current?.click()}
             title="Attach Image"
           >
             <Image size={18} className="cursor-pointer" />
           </button>
 
-          {/* Send Button (inside input on right side) */}
+          {/* Send Button (inside input on right side with spinning loader) */}
           <button
             type="submit"
-            disabled={!text.trim() && !imagePreview}
+            disabled={(!text.trim() && !imagePreview) || isSending}
             className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-circle btn-sm bg-base-content/5 hover:bg-base-content/10 text-base-content/70 disabled:opacity-30 transition cursor-pointer disabled:cursor-not-allowed"
             title="Send Message"
           >
-            <Send size={18} className="cursor-pointer" />
+            {isSending ? (
+              <Loader2 size={18} className="animate-spin text-primary" />
+            ) : (
+              <Send size={18} className="cursor-pointer" />
+            )}
           </button>
         </div>
       </form>
