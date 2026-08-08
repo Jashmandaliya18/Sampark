@@ -76,7 +76,7 @@ const MessageInput = () => {
       {showEmojiPicker && (
         <div 
           ref={emojiPickerRef}
-          className='absolute bottom-20 left-4 z-50 shadow-2xl rounded-2xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-150'
+          className='absolute bottom-20 left-4 z-50 shadow-2xl rounded-2xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-150 cursor-default'
         >
           <EmojiPicker 
             onEmojiClick={handleEmojiClick}
@@ -95,12 +95,14 @@ const MessageInput = () => {
             <img
               src={imagePreview}
               alt="Preview"
-              className='size-20 object-cover rounded-lg border border-zinc-700' />
+              className='size-20 object-cover rounded-lg border border-zinc-700 cursor-pointer' />
             <button
               className='absolute -top-1.5 -right-1.5 size-5 rounded-full bg-base-300 flex items-center justify-center cursor-pointer hover:bg-base-100 transition'
               onClick={removeImage}
-              type='button'>
-              <X className='size-3' />
+              type='button'
+              title="Remove image"
+            >
+              <X className='size-3 cursor-pointer' />
             </button>
           </div>
         </div>
@@ -112,18 +114,18 @@ const MessageInput = () => {
           <button
             ref={emojiButtonRef}
             type="button"
-            className={`absolute left-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle transition ${
+            className={`absolute left-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle transition cursor-pointer ${
               showEmojiPicker ? 'text-primary' : 'text-base-content/40 hover:text-base-content/80'
             }`}
             onClick={() => setShowEmojiPicker((prev) => !prev)}
             title="Add Emoji"
           >
-            <Smile size={20} />
+            <Smile size={20} className="cursor-pointer" />
           </button>
 
           <input
             type="text"
-            className="w-full pl-12 pr-20 py-3 rounded-xl bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 caret-base-content/80 focus:outline-none focus:border-base-content/25 focus:bg-base-200 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition"
+            className="w-full pl-12 pr-20 py-3 rounded-xl bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 caret-base-content/80 focus:outline-none focus:border-base-content/25 focus:bg-base-200 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition cursor-text"
             placeholder="Type a message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -140,21 +142,21 @@ const MessageInput = () => {
           {/* Image Button (inside input on right side) */}
           <button
             type="button"
-            className="absolute right-12 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-base-content/40 hover:text-base-content/80 transition"
+            className="absolute right-12 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-base-content/40 hover:text-base-content/80 transition cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
             title="Attach Image"
           >
-            <Image size={18} />
+            <Image size={18} className="cursor-pointer" />
           </button>
 
           {/* Send Button (inside input on right side) */}
           <button
             type="submit"
             disabled={!text.trim() && !imagePreview}
-            className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-circle btn-sm bg-base-content/5 hover:bg-base-content/10 text-base-content/70 disabled:opacity-30 transition"
+            className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-circle btn-sm bg-base-content/5 hover:bg-base-content/10 text-base-content/70 disabled:opacity-30 transition cursor-pointer disabled:cursor-not-allowed"
             title="Send Message"
           >
-            <Send size={18} />
+            <Send size={18} className="cursor-pointer" />
           </button>
         </div>
       </form>

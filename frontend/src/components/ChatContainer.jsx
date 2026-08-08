@@ -38,7 +38,7 @@ const ChatContainer = () => {
     });
   };
 
-  const isOnline = onlineUsers.includes(selectedUser._id);
+  const isOnline = onlineUsers.map(String).includes(String(selectedUser._id));
 
   if (isMessagesLoading) {
     return (
@@ -62,7 +62,7 @@ const ChatContainer = () => {
 
       <div className='flex-1 overflow-y-auto p-4 space-y-4'>
         {message.map((msg) => {
-          const isMe = msg.senderId === authUser._id;
+          const isMe = String(msg.senderId) === String(authUser._id);
           const senderName = isMe ? authUser.fullname : selectedUser.fullname;
           const avatarPic = isMe ? (authUser.profilePic || "/avatar.png") : (selectedUser.profilePic || "/avatar.png");
 

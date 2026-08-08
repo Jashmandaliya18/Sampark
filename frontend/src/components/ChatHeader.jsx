@@ -9,7 +9,7 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
 
     if (!selectedUser) return null;
 
-    const isOnline = onlineUsers.includes(selectedUser._id);
+    const isOnline = onlineUsers.map(String).includes(String(selectedUser._id));
 
     return (
         <div className='p-2.5 border-b border-base-300 select-none'>
@@ -31,15 +31,15 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
                       }}
                       title="Click to preview photo"
                     >
-                        <div className='size-10 rounded-full relative group-hover:scale-105 transition-transform overflow-hidden border border-base-300'>
-                            <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullname} />
+                        <div className='size-10 rounded-full relative group-hover:scale-105 transition-transform overflow-hidden border border-base-300 cursor-pointer'>
+                            <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullname} className="cursor-pointer" />
                         </div>
                     </div>
 
                     {/* User Info */}
-                    <div>
-                        <h3 className='font-medium text-base-content hover:underline'>{selectedUser.fullname}</h3>
-                        <p className='text-xs text-base-content/70 flex items-center gap-1.5'>
+                    <div className="cursor-pointer">
+                        <h3 className='font-medium text-base-content hover:underline cursor-pointer'>{selectedUser.fullname}</h3>
+                        <p className='text-xs text-base-content/70 flex items-center gap-1.5 cursor-pointer'>
                             <span className={`size-2 rounded-full ${isOnline ? "bg-green-500" : "bg-zinc-500"}`}></span>
                             {isOnline ? "Online" : "Offline"}
                         </p>
@@ -49,7 +49,8 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
                 {/* Close Button */}
                 <button 
                   onClick={() => setSelectedUser(null)} 
-                  className='btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content'
+                  className='btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content cursor-pointer'
+                  title="Close conversation"
                 >
                     <X className='cursor-pointer' size={20} />
                 </button>

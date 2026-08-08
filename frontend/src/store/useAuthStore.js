@@ -47,7 +47,6 @@ export const useAuthStore = create((set, get) => ({
             const res = await axiosInstance.post("/auth/login", data);
             set({ authUser: res.data });
             toast.success("Logged in successfully");
-
             get().connectSocket();
         } catch (error) {
             toast.error(error?.response?.data?.message || "Login failed");
@@ -68,40 +67,44 @@ export const useAuthStore = create((set, get) => ({
     },
 
     updateProfile: async (data) => {
-        set({ isUpadatingProfile: true });
+        set({ isUpdatingProfile: true });
         try {
             const res = await axiosInstance.put("/auth/update-profile", data);
             set({ authUser: res.data });
-            toast.success("Profile updates successfully");
+            toast.success("Profile updated successfully");
         } catch (error) {
             console.log("Error in updating profile: ", error);
             toast.error(error?.response?.data?.message || "Update failed");
-
         } finally {
-            set({ isUpadatingProfile: false });
+            set({ isUpdatingProfile: false });
         }
     },
 
     connectSocket: () => {
         const { authUser } = get();
-        if (!authUser || get().socket?.connected) return;
+        if (!authUser) return;
+        if (get().socket?.connected) return;
 
         const socket = io(BASE_URL, {
             query: {
-                userId: authUser._id,
+                userId: String(authUser._id),
             },
+            withCredentials: true,
         });
+
         socket.connect();
-        set({ socket: socket })
+        set({ socket: socket });
 
         socket.on("getOnlineUsers", (userIds) => {
-            set({ onlineUsers: userIds });
-        })
-
+            set({ onlineUsers: Array.isArray(userIds) ? userIds.map(String) : [] });
+        });
     },
 
     disconnectSocket: () => {
-        if (get().socket?.connected) get().socket.disconnect();
+        if (get().socket?.connected) {
+            get().socket.disconnect();
+        }
+        set({ socket: null, onlineUsers: [] });
     }
 
 }))
