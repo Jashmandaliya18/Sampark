@@ -20,13 +20,23 @@ const Sidebar = () => {
     onlineUserIdsStrings.filter((id) => id !== String(authUser?._id)).length
   );
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
-      user.fullname.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-      (user.email && user.email.toLowerCase().includes(searchQuery.trim().toLowerCase()));
-    const matchesOnline = showOnlineOnly ? onlineUserIdsStrings.includes(String(user._id)) : true;
-    return matchesSearch && matchesOnline;
-  });
+  // Filter users by search & online toggle, then sort online users to the top
+  const sortedAndFilteredUsers = users
+    .filter((user) => {
+      const matchesSearch = 
+        user.fullname.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+        (user.email && user.email.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+      const matchesOnline = showOnlineOnly ? onlineUserIdsStrings.includes(String(user._id)) : true;
+      return matchesSearch && matchesOnline;
+    })
+    .sort((a, b) => {
+      const isOnlineA = onlineUserIdsStrings.includes(String(a._id));
+      const isOnlineB = onlineUserIdsStrings.includes(String(b._id));
+
+      if (isOnlineA && !isOnlineB) return -1; // online user comes first
+      if (!isOnlineA && isOnlineB) return 1;  // offline user comes after
+      return 0;
+    });
 
   if (isUserLoading) return <SidebarSkeleton />
 
@@ -39,7 +49,7 @@ const Sidebar = () => {
             <Users className='size-6' />
             <span className='font-semibold hidden lg:block text-base-content'>Contacts</span>
           </div>
-          <span className='text-xs text-base-content/60 hidden lg:block'>
+          <span className='text-xs text-base-content/60 hidden lg:block font-medium'>
             {onlineOtherUsersCount} online
           </span>
         </div>
@@ -81,7 +91,7 @@ const Sidebar = () => {
 
       {/* Users List */}
       <div className='overflow-y-auto w-full py-2 flex-1'>
-        {filteredUsers.map((user) => {
+        {sortedAndFilteredUsers.map((user) => {
           const isOnline = onlineUserIdsStrings.includes(String(user._id));
           return (
             <button
@@ -91,6 +101,7 @@ const Sidebar = () => {
                 selectedUser?._id === user._id ? "bg-base-200 ring-1 ring-base-300" : ""
               }`}
             >
+              {/* Profile Avatar with Green Dot overlay when online */}
               <div className='relative mx-auto lg:mx-0 cursor-pointer'>
                 <img
                   src={user.profilePic || "/avatar.png"}
@@ -105,7 +116,7 @@ const Sidebar = () => {
               {/* User info - visible on larger screen */}
               <div className='hidden lg:block text-left min-w-0 flex-1 cursor-pointer'>
                 <div className='font-medium truncate text-base-content text-sm cursor-pointer'>{user.fullname}</div>
-                <div className='text-xs text-base-content/60 cursor-pointer'>
+                <div className='text-xs text-zinc-400 cursor-pointer'>
                   {isOnline ? "Online" : "Offline"}
                 </div>
               </div>
@@ -113,7 +124,7 @@ const Sidebar = () => {
           );
         })}
 
-        {filteredUsers.length === 0 && (
+        {sortedAndFilteredUsers.length === 0 && (
           <div className='text-center text-xs text-base-content/50 py-8 px-4'>
             {searchQuery ? `No contacts matching "${searchQuery}"` : "No contacts found"}
           </div>

@@ -44,6 +44,19 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    reactToMessage: async (messageId, emoji) => {
+        try {
+            const res = await axiosInstance.put(`/messages/react/${messageId}`, { emoji });
+            set({
+                message: get().message.map((msg) =>
+                    msg._id === messageId ? res.data : msg
+                )
+            });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || "Failed to update reaction");
+        }
+    },
+
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if (!selectedUser) return;
@@ -51,8 +64,9 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
 
-        // Clean up any existing subscription first to prevent duplicates
+        // Clean up any existing subscriptions first to prevent duplicates
         socket.off("newMessage");
+        socket.off("messageReaction");
 
         socket.on("newMessage", (newMessage) => {
             const isMessageSentFromSelectedUser = String(newMessage.senderId) === String(selectedUser._id);
@@ -62,12 +76,21 @@ export const useChatStore = create((set, get) => ({
                 message: [...get().message, newMessage],
             });
         });
+
+        socket.on("messageReaction", ({ messageId, reactions }) => {
+            set({
+                message: get().message.map((msg) =>
+                    msg._id === messageId ? { ...msg, reactions } : msg
+                ),
+            });
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         if (socket) {
             socket.off("newMessage");
+            socket.off("messageReaction");
         }
     },
 

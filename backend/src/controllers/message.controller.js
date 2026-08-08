@@ -68,3 +68,63 @@ export const sendMessage = async (req, res) => {
         res.status(500).json({ message: "Internal Server Error while Sending Messages" });
     }
 }
+
+export const reactToMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const { emoji } = req.body;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+
+        if (!message.reactions) {
+            message.reactions = [];
+        }
+
+        // Find existing reaction by current user
+        const existingIndex = message.reactions.findIndex(
+            (r) => String(r.userId) === String(userId)
+        );
+
+        if (!emoji || emoji === "❌") {
+            // Remove reaction
+            if (existingIndex > -1) {
+                message.reactions.splice(existingIndex, 1);
+            }
+        } else if (existingIndex > -1) {
+            if (message.reactions[existingIndex].emoji === emoji) {
+                // Toggle off if same emoji clicked again
+                message.reactions.splice(existingIndex, 1);
+            } else {
+                // Change emoji
+                message.reactions[existingIndex].emoji = emoji;
+            }
+        } else {
+            // Add new reaction
+            message.reactions.push({ userId, emoji });
+        }
+
+        await message.save();
+
+        // Emit socket event to both receiver and sender
+        const receiverSockets = getReceiverSocketId(message.receiverid);
+        const senderSockets = getReceiverSocketId(message.senderId);
+        const targetSockets = [...new Set([...receiverSockets, ...senderSockets])];
+
+        targetSockets.forEach((socketId) => {
+            io.to(socketId).emit("messageReaction", {
+                messageId: message._id,
+                reactions: message.reactions,
+            });
+        });
+
+        res.status(200).json(message);
+
+    } catch (error) {
+        console.log("Error in reactToMessage:", error.message);
+        res.status(500).json({ message: "Internal Server Error while Reacting to Message" });
+    }
+}
