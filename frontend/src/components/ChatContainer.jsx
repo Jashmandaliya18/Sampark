@@ -10,7 +10,7 @@ import { formateMessageTime } from "../lib/utils.js";
 
 const ChatContainer = () => {
   const { message, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
-  const { authUser, onlineUsers } = useAuthStore();
+  const { authUser, onlineUsers, socket } = useAuthStore();
 
   const [isUserInfoOpen, setIsUserInfoOpen] = useState(false);
   const [photoPreview, setPhotoPreview] = useState({ isOpen: false, url: '', title: '' });
@@ -22,7 +22,7 @@ const ChatContainer = () => {
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser._id, socket, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (messageEndRef.current && message) {

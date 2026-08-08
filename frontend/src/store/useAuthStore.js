@@ -3,7 +3,7 @@ import { axiosInstance } from "../lib/axios.js"
 import toast from 'react-hot-toast';
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "https://sampark-1.onrender.com";
+const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
@@ -83,26 +83,34 @@ export const useAuthStore = create((set, get) => ({
     connectSocket: () => {
         const { authUser } = get();
         if (!authUser) return;
-        if (get().socket?.connected) return;
 
-        const socket = io(BASE_URL, {
-            query: {
-                userId: String(authUser._id),
-            },
-            withCredentials: true,
-        });
+        let socket = get().socket;
 
-        socket.connect();
-        set({ socket: socket });
+        if (socket?.connected) return;
 
+        if (!socket) {
+            socket = io(BASE_URL, {
+                query: {
+                    userId: String(authUser._id),
+                },
+                withCredentials: true,
+                transports: ["websocket", "polling"],
+            });
+            set({ socket: socket });
+        } else {
+            socket.connect();
+        }
+
+        socket.off("getOnlineUsers");
         socket.on("getOnlineUsers", (userIds) => {
             set({ onlineUsers: Array.isArray(userIds) ? userIds.map(String) : [] });
         });
     },
 
     disconnectSocket: () => {
-        if (get().socket?.connected) {
-            get().socket.disconnect();
+        const socket = get().socket;
+        if (socket?.connected) {
+            socket.disconnect();
         }
         set({ socket: null, onlineUsers: [] });
     }
