@@ -10,16 +10,13 @@ const MobileContactRow = ({ user, isOnline, isSelected, onSelect }) => {
             }`}
             aria-label={`Open conversation with ${user.fullname}`}
         >
-            {/* Avatar container with online dot indicator */}
+            {/* Avatar container */}
             <div className="relative shrink-0">
                 <img
                     src={user.profilePic || '/avatar.png'}
                     alt={user.fullname}
                     className="size-12 object-cover rounded-full border border-base-300 shadow-sm"
                 />
-                {isOnline && (
-                    <span className="absolute bottom-0 right-0 size-3.5 bg-emerald-500 rounded-full ring-2 ring-base-100 shadow-sm" />
-                )}
             </div>
 
             {/* User Details with Proper Text Truncation */}
