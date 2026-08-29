@@ -16,10 +16,10 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
     return (
         <div className='p-2.5 border-b border-base-300 select-none'>
             <div className='flex items-center justify-between'>
-                {/* Back button for mobile view */}
+                {/* Back button for mobile & tablet view (< 1024px) */}
                 <button
                     onClick={() => setSelectedUser(null)}
-                    className='btn btn-ghost btn-sm btn-circle text-base-content/80 hover:text-base-content md:hidden mr-1 cursor-pointer'
+                    className='btn btn-ghost btn-sm btn-circle text-base-content/80 hover:text-base-content lg:hidden mr-1 cursor-pointer'
                     title="Back to contacts list"
                 >
                     <ArrowLeft size={20} className='cursor-pointer' />
