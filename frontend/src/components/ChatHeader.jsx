@@ -1,11 +1,13 @@
 import React from 'react'
 import { useChatStore } from '../store/useChatStore.js'
 import { useAuthStore } from '../store/useAuthStore.js'
-import { X } from 'lucide-react'
+import { useVideoCallStore } from '../features/videoCall/store/useVideoCallStore.js'
+import { X, Video } from 'lucide-react'
 
 const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
     const { selectedUser, setSelectedUser } = useChatStore();
     const { onlineUsers } = useAuthStore();
+    const { initiateCall } = useVideoCallStore();
 
     if (!selectedUser) return null;
 
@@ -46,14 +48,25 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
                     </div>
                 </div>
 
-                {/* Close Button */}
-                <button 
-                  onClick={() => setSelectedUser(null)} 
-                  className='btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content cursor-pointer'
-                  title="Close conversation"
-                >
-                    <X className='cursor-pointer' size={20} />
-                </button>
+                <div className='flex items-center gap-1'>
+                    {/* Video Call Button */}
+                    <button 
+                      onClick={() => initiateCall(selectedUser)} 
+                      className='btn btn-ghost btn-sm btn-circle text-primary hover:bg-primary/10 cursor-pointer'
+                      title="Start Video Call"
+                    >
+                        <Video className='cursor-pointer' size={20} />
+                    </button>
+
+                    {/* Close Button */}
+                    <button 
+                      onClick={() => setSelectedUser(null)} 
+                      className='btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content cursor-pointer'
+                      title="Close conversation"
+                    >
+                        <X className='cursor-pointer' size={20} />
+                    </button>
+                </div>
             </div>
         </div>
     )

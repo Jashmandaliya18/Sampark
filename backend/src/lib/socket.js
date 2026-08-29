@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import http from 'http';
 import express from 'express';
+import { registerVideoCallHandlers } from '../videoCall/videoCall.socket.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -26,6 +27,9 @@ export function getReceiverSocketId(userId) {
 
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
+
+    // Register isolated video call event handlers
+    registerVideoCallHandlers(io, socket);
 
     const userId = socket.handshake.query.userId;
     if (userId && userId !== "undefined" && userId !== "null") {

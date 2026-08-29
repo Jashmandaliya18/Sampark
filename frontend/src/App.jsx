@@ -8,6 +8,7 @@ import ProfilePage from "../src/pages/ProfilePage.jsx"
 import SettingsPage from "../src/pages/SettingsPage.jsx"
 import { useAuthStore } from "../src/store/useAuthStore.js"
 import { useThemeStore } from "../src/store/useThemeStore.js"
+import VideoCallContainer from "../src/features/videoCall/components/VideoCallContainer.jsx"
 import { Loader } from "lucide-react"
 import { Toaster } from "react-hot-toast"
 
@@ -40,7 +41,7 @@ const App = () => {
       </Routes>
 
       <Toaster />
-
+      <VideoCallContainer />
     </div>
   )
 }
