@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { User, MicOff, VideoOff } from 'lucide-react';
+import { User, VideoOff } from 'lucide-react';
 
 const RemoteVideo = ({
     stream,
     peerName = 'Remote User',
     peerAvatar = '',
-    peerIsMuted = false,
     peerIsVideoOff = false,
     className = '',
 }) => {
@@ -49,21 +48,6 @@ const RemoteVideo = ({
                     </p>
                 </div>
             )}
-
-            {/* Peer Name & WhatsApp-style Mute/Video Status Badges */}
-            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs text-white font-medium flex items-center gap-2.5 border border-white/10 shadow-lg">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>{peerName}</span>
-                </div>
-
-                {peerIsMuted && (
-                    <div className="flex items-center gap-1 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full text-[11px] font-semibold animate-fade-in">
-                        <MicOff size={12} />
-                        <span>Muted</span>
-                    </div>
-                )}
-            </div>
         </div>
     );
 };

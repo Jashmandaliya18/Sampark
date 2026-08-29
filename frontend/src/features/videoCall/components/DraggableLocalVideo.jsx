@@ -12,7 +12,7 @@ const DraggableLocalVideo = ({
     const [position, setPosition] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
 
-    const isPointerDownRef = useRef(false);
+    const isDraggingRef = useRef(false);
     const startPointerRef = useRef({ x: 0, y: 0 });
     const startPosRef = useRef({ x: 0, y: 0 });
     const currentPosRef = useRef({ x: 0, y: 0 });
@@ -27,11 +27,14 @@ const DraggableLocalVideo = ({
         const containerRect = containerRef.current.getBoundingClientRect();
         const elementRect = elementRef.current.getBoundingClientRect();
 
-        const marginX = 24;
-        const marginY = window.innerWidth < 768 ? 112 : 112; // Above bottom controls
+        const elemW = elementRect.width > 0 ? elementRect.width : (window.innerWidth < 768 ? 128 : 192);
+        const elemH = elementRect.height > 0 ? elementRect.height : (window.innerWidth < 768 ? 176 : 256);
 
-        const x = Math.max(16, containerRect.width - elementRect.width - marginX);
-        const y = Math.max(16, containerRect.height - elementRect.height - marginY);
+        const marginX = 20;
+        const marginY = 112; // Above bottom call controls
+
+        const x = Math.max(12, containerRect.width - elemW - marginX);
+        const y = Math.max(12, containerRect.height - elemH - marginY);
 
         return { x, y };
     }, [containerRef]);
@@ -45,12 +48,15 @@ const DraggableLocalVideo = ({
         const containerRect = containerRef.current.getBoundingClientRect();
         const elementRect = elementRef.current.getBoundingClientRect();
 
+        const elemW = elementRect.width > 0 ? elementRect.width : (window.innerWidth < 768 ? 128 : 192);
+        const elemH = elementRect.height > 0 ? elementRect.height : (window.innerWidth < 768 ? 176 : 256);
+
         const padding = 12; // Safety margin inside screen edges
 
         const minX = padding;
-        const maxX = Math.max(minX, containerRect.width - elementRect.width - padding);
+        const maxX = Math.max(minX, containerRect.width - elemW - padding);
         const minY = padding;
-        const maxY = Math.max(minY, containerRect.height - elementRect.height - padding);
+        const maxY = Math.max(minY, containerRect.height - elemH - padding);
 
         const clampedX = Math.max(minX, Math.min(x, maxX));
         const clampedY = Math.max(minY, Math.min(y, maxY));
@@ -58,13 +64,13 @@ const DraggableLocalVideo = ({
         return { x: clampedX, y: clampedY };
     }, [containerRef]);
 
-    // Initialize or reset position
+    // Initialize or reset position on mount
     useEffect(() => {
         const timer = setTimeout(() => {
             const initialPos = getInitialPosition();
             currentPosRef.current = initialPos;
             setPosition(initialPos);
-        }, 100);
+        }, 80);
 
         return () => clearTimeout(timer);
     }, [getInitialPosition]);
@@ -88,31 +94,15 @@ const DraggableLocalVideo = ({
         };
     }, [clampPosition]);
 
-    // Pointer Events Handlers (Mouse + Touch + Pen)
-    const handlePointerDown = (e) => {
-        if (!elementRef.current) return;
+    // Drag Movement Handler (used by global window listeners)
+    const onDragMove = useCallback((clientX, clientY) => {
+        if (!isDraggingRef.current || !elementRef.current) return;
 
-        // Prevent dragging if clicking button inside preview
-        if (e.target.closest('button')) return;
-
-        isPointerDownRef.current = true;
-        hasMovedRef.current = false;
-
-        startPointerRef.current = { x: e.clientX, y: e.clientY };
-        startPosRef.current = { ...currentPosRef.current };
-
-        e.currentTarget.setPointerCapture(e.pointerId);
-    };
-
-    const handlePointerMove = (e) => {
-        if (!isPointerDownRef.current || !elementRef.current) return;
-
-        const dx = e.clientX - startPointerRef.current.x;
-        const dy = e.clientY - startPointerRef.current.y;
+        const dx = clientX - startPointerRef.current.x;
+        const dy = clientY - startPointerRef.current.y;
         const distance = Math.hypot(dx, dy);
 
-        // Movement threshold check (5px) to prevent accidental taps from starting drag
-        if (distance > 5 && !hasMovedRef.current) {
+        if (distance > 4 && !hasMovedRef.current) {
             hasMovedRef.current = true;
             setIsDragging(true);
         }
@@ -124,28 +114,76 @@ const DraggableLocalVideo = ({
             const clamped = clampPosition(rawX, rawY);
             currentPosRef.current = clamped;
 
-            // Direct GPU-accelerated transform to avoid React re-render lag
             elementRef.current.style.transform = `translate3d(${clamped.x}px, ${clamped.y}px, 0px)`;
         }
-    };
+    }, [clampPosition]);
 
-    const handlePointerUp = (e) => {
-        if (!isPointerDownRef.current) return;
+    const onDragEnd = useCallback(() => {
+        if (!isDraggingRef.current) return;
 
-        isPointerDownRef.current = false;
-
-        try {
-            if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-                e.currentTarget.releasePointerCapture(e.pointerId);
-            }
-        } catch (err) {
-            // Ignore capture release error if already released
-        }
+        isDraggingRef.current = false;
+        setIsDragging(false);
 
         if (hasMovedRef.current) {
-            setIsDragging(false);
             setPosition({ ...currentPosRef.current });
         }
+    }, []);
+
+    // Pointer Down (Mouse, Touch & Pen)
+    const handleStart = (clientX, clientY) => {
+        isDraggingRef.current = true;
+        hasMovedRef.current = false;
+
+        startPointerRef.current = { x: clientX, y: clientY };
+        startPosRef.current = { ...currentPosRef.current };
+    };
+
+    const handlePointerDown = (e) => {
+        if (e.target.closest('button')) return;
+
+        handleStart(e.clientX, e.clientY);
+
+        const handlePointerMove = (ev) => {
+            onDragMove(ev.clientX, ev.clientY);
+        };
+
+        const handlePointerUp = () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerUp);
+            onDragEnd();
+        };
+
+        window.addEventListener('pointermove', handlePointerMove, { passive: false });
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
+    };
+
+    const handleTouchStart = (e) => {
+        if (e.target.closest('button')) return;
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        handleStart(touch.clientX, touch.clientY);
+
+        const handleTouchMove = (ev) => {
+            if (ev.cancelable) ev.preventDefault();
+            const t = ev.touches[0];
+            if (t) {
+                onDragMove(t.clientX, t.clientY);
+            }
+        };
+
+        const handleTouchEnd = () => {
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+            window.removeEventListener('touchcancel', handleTouchEnd);
+            onDragEnd();
+        };
+
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleTouchEnd);
+        window.addEventListener('touchcancel', handleTouchEnd);
     };
 
     const currentX = position?.x ?? 0;
@@ -155,9 +193,7 @@ const DraggableLocalVideo = ({
         <div
             ref={elementRef}
             onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onTouchStart={handleTouchStart}
             style={{
                 position: 'absolute',
                 top: 0,
@@ -166,6 +202,7 @@ const DraggableLocalVideo = ({
                 touchAction: 'none',
                 userSelect: 'none',
                 WebkitUserDrag: 'none',
+                pointerEvents: 'auto',
             }}
             className={`z-30 transition-shadow duration-200 cursor-grab active:cursor-grabbing ${
                 isDragging ? 'shadow-2xl scale-[1.02] ring-2 ring-primary/40' : 'shadow-xl'
