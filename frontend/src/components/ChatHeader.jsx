@@ -2,7 +2,7 @@ import React from 'react'
 import { useChatStore } from '../store/useChatStore.js'
 import { useAuthStore } from '../store/useAuthStore.js'
 import { useVideoCallStore } from '../features/videoCall/store/useVideoCallStore.js'
-import { X, Video } from 'lucide-react'
+import { X, Video, ArrowLeft } from 'lucide-react'
 
 const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
     const { selectedUser, setSelectedUser } = useChatStore();
@@ -16,9 +16,18 @@ const ChatHeader = ({ onOpenUserInfo, onOpenPhotoPreview }) => {
     return (
         <div className='p-2.5 border-b border-base-300 select-none'>
             <div className='flex items-center justify-between'>
+                {/* Back button for mobile view */}
+                <button
+                    onClick={() => setSelectedUser(null)}
+                    className='btn btn-ghost btn-sm btn-circle text-base-content/80 hover:text-base-content md:hidden mr-1 cursor-pointer'
+                    title="Back to contacts list"
+                >
+                    <ArrowLeft size={20} className='cursor-pointer' />
+                </button>
+
                 {/* Clickable Header Bar area */}
                 <div 
-                  className='flex items-center gap-3 cursor-pointer hover:bg-base-200/60 p-1.5 rounded-xl transition flex-1 mr-2'
+                  className='flex items-center gap-3 cursor-pointer hover:bg-base-200/60 p-1.5 rounded-xl transition flex-1 mr-2 min-w-0'
                   onClick={() => onOpenUserInfo && onOpenUserInfo()}
                   title="Click to view user information"
                 >

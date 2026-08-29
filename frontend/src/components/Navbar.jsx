@@ -20,25 +20,29 @@ const Navbar = () => {
                     </Link>
 
                     {/* RIGHT */}
-                    <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-3 sm:gap-6 text-sm">
                         <Link
                             to="/settings"
-                            className="flex items-center gap-2 text-base-content hover:text-primary transition-colors cursor-pointer">
+                            className="flex items-center gap-1.5 text-base-content hover:text-primary transition-colors cursor-pointer"
+                            title="Settings"
+                        >
                             <Settings className="h-4 w-4 cursor-pointer" />
-                            <span className="cursor-pointer">Settings</span>
+                            <span className="hidden sm:inline cursor-pointer">Settings</span>
                         </Link>
                         {authUser && (
                             <>
                                 <Link
                                     to="/profile"
-                                    className="flex items-center gap-2 text-base-content hover:text-primary transition-colors cursor-pointer">
+                                    className="flex items-center gap-1.5 text-base-content hover:text-primary transition-colors cursor-pointer"
+                                    title="Profile"
+                                >
                                     <User className="h-4 w-4 cursor-pointer" />
-                                    <span className="cursor-pointer">Profile</span>
+                                    <span className="hidden sm:inline cursor-pointer">Profile</span>
                                 </Link>
                                 <button
                                     onClick={logout}
                                     disabled={isLoggingOut}
-                                    className="flex items-center gap-2 text-base-content hover:text-error transition-colors cursor-pointer disabled:opacity-50"
+                                    className="flex items-center gap-1.5 text-base-content hover:text-error transition-colors cursor-pointer disabled:opacity-50"
                                     title="Logout"
                                 >
                                     {isLoggingOut ? (
@@ -46,7 +50,7 @@ const Navbar = () => {
                                     ) : (
                                         <LogOut className="h-4 w-4 cursor-pointer" />
                                     )}
-                                    <span className="cursor-pointer">{isLoggingOut ? "Logging out..." : "Logout"}</span>
+                                    <span className="hidden sm:inline cursor-pointer">{isLoggingOut ? "Logging out..." : "Logout"}</span>
                                 </button>
                             </>
                         )}

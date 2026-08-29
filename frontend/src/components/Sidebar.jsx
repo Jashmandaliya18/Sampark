@@ -41,21 +41,21 @@ const Sidebar = () => {
   if (isUserLoading) return <SidebarSkeleton />
 
   return (
-    <aside className='h-full w-20 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200 select-none'>
+    <aside className='h-full w-full border-r border-base-300 flex flex-col transition-all duration-200 select-none'>
       <div className='border-b border-base-300 w-full p-4 space-y-3'>
         {/* Header Title */}
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
-            <Users className='size-6' />
-            <span className='font-semibold hidden lg:block text-base-content'>Contacts</span>
+            <Users className='size-6 text-primary' />
+            <span className='font-semibold text-base-content text-base'>Contacts</span>
           </div>
-          <span className='text-xs text-base-content/60 hidden lg:block font-medium'>
+          <span className='text-xs text-base-content/60 font-medium'>
             {onlineOtherUsersCount} online
           </span>
         </div>
 
-        {/* Search Bar (visible on larger screens) */}
-        <div className='hidden lg:block relative'>
+        {/* Search Bar */}
+        <div className='relative'>
           <input
             type="text"
             placeholder="Search contacts..."
@@ -76,7 +76,7 @@ const Sidebar = () => {
         </div>
 
         {/* Online filter checkbox */}
-        <div className='hidden lg:flex items-center gap-2 pt-1'>
+        <div className='flex items-center gap-2 pt-1'>
           <label className='cursor-pointer flex items-center gap-2 text-xs text-base-content/70 hover:text-base-content transition'>
             <input
               type="checkbox"
@@ -102,7 +102,7 @@ const Sidebar = () => {
               }`}
             >
               {/* Profile Avatar with Green Dot overlay when online */}
-              <div className='relative mx-auto lg:mx-0 cursor-pointer'>
+              <div className='relative shrink-0 cursor-pointer'>
                 <img
                   src={user.profilePic || "/avatar.png"}
                   alt={user.fullname}
@@ -113,10 +113,11 @@ const Sidebar = () => {
                 )}
               </div>
 
-              {/* User info - visible on larger screen */}
-              <div className='hidden lg:block text-left min-w-0 flex-1 cursor-pointer'>
+              {/* User info */}
+              <div className='text-left min-w-0 flex-1 cursor-pointer'>
                 <div className='font-medium truncate text-base-content text-sm cursor-pointer'>{user.fullname}</div>
-                <div className='text-xs text-zinc-400 cursor-pointer'>
+                <div className='text-xs text-zinc-400 cursor-pointer flex items-center gap-1.5 mt-0.5'>
+                  <span className={`size-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-zinc-500"}`} />
                   {isOnline ? "Online" : "Offline"}
                 </div>
               </div>
