@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useChatStore } from "../store/useChatStore.js"
 import { useAuthStore } from '../store/useAuthStore.js';
 import SidebarSkeleton from '../components/skeletons/SidebarSkeleton.jsx';
+import MobileHeader from './mobile/MobileHeader.jsx';
+import MobileContactRow from './mobile/MobileContactRow.jsx';
 import { Users, Search, X } from "lucide-react"
 
-const Sidebar = () => {
+const Sidebar = ({ isMobile = false }) => {
   const { getUsers, users, selectedUser, setSelectedUser, isUserLoading } = useChatStore();
   const { onlineUsers, authUser } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -41,27 +43,33 @@ const Sidebar = () => {
   if (isUserLoading) return <SidebarSkeleton />
 
   return (
-    <aside className='h-full w-full border-r border-base-300 flex flex-col transition-all duration-200 select-none'>
-      <div className='border-b border-base-300 w-full p-4 space-y-3'>
-        {/* Header Title */}
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            <Users className='size-6 text-primary' />
-            <span className='font-semibold text-base-content text-base'>Contacts</span>
+    <aside className='h-full w-full border-r border-base-300 flex flex-col transition-all duration-200 select-none bg-base-100 overflow-hidden'>
+      {/* Mobile Top Header */}
+      {isMobile && <MobileHeader />}
+
+      <div className='border-b border-base-300 w-full p-4 space-y-3 shrink-0'>
+        {/* Header Title (Desktop) */}
+        {!isMobile && (
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <Users className='size-6 text-primary' />
+              <span className='font-semibold text-base-content text-base'>Contacts</span>
+            </div>
+            <span className='text-xs text-base-content/60 font-medium'>
+              {onlineOtherUsersCount} online
+            </span>
           </div>
-          <span className='text-xs text-base-content/60 font-medium'>
-            {onlineOtherUsersCount} online
-          </span>
-        </div>
+        )}
 
         {/* Search Bar */}
-        <div className='relative'>
+        <div className='relative w-full'>
           <input
             type="text"
             placeholder="Search contacts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-8 py-2 rounded-xl bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary/50 focus:bg-base-200/80 transition cursor-text"
+            className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-primary/50 focus:bg-base-200/80 transition cursor-text"
+            aria-label="Search contacts"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-base-content/40 pointer-events-none" />
           {searchQuery && (
@@ -69,6 +77,7 @@ const Sidebar = () => {
               onClick={() => setSearchQuery("")}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content transition cursor-pointer"
               title="Clear search"
+              aria-label="Clear search query"
             >
               <X className="size-4 cursor-pointer" />
             </button>
@@ -76,7 +85,7 @@ const Sidebar = () => {
         </div>
 
         {/* Online filter checkbox */}
-        <div className='flex items-center gap-2 pt-1'>
+        <div className='flex items-center justify-between pt-0.5'>
           <label className='cursor-pointer flex items-center gap-2 text-xs text-base-content/70 hover:text-base-content transition'>
             <input
               type="checkbox"
@@ -84,49 +93,33 @@ const Sidebar = () => {
               onChange={(e) => setShowOnlineOnly(e.target.checked)}
               className='checkbox checkbox-xs rounded cursor-pointer'
             />
-            <span className="cursor-pointer">Show online only</span>
+            <span className="cursor-pointer font-medium">Show online only</span>
           </label>
+          {isMobile && (
+            <span className='text-xs text-base-content/50 font-medium'>
+              {onlineOtherUsersCount} online
+            </span>
+          )}
         </div>
       </div>
 
       {/* Users List */}
-      <div className='overflow-y-auto w-full py-2 flex-1'>
+      <div className='overflow-y-auto w-full flex-1 divide-y divide-base-200/40'>
         {sortedAndFilteredUsers.map((user) => {
           const isOnline = onlineUserIdsStrings.includes(String(user._id));
           return (
-            <button
+            <MobileContactRow
               key={user._id}
-              onClick={() => setSelectedUser(user)}
-              className={`w-full p-3 flex items-center gap-3 hover:bg-base-200/60 transition-colors cursor-pointer ${
-                selectedUser?._id === user._id ? "bg-base-200 ring-1 ring-base-300" : ""
-              }`}
-            >
-              {/* Profile Avatar with Green Dot overlay when online */}
-              <div className='relative shrink-0 cursor-pointer'>
-                <img
-                  src={user.profilePic || "/avatar.png"}
-                  alt={user.fullname}
-                  className='size-12 object-cover rounded-full border border-base-300 cursor-pointer'
-                />
-                {isOnline && (
-                  <span className='absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-base-100' />
-                )}
-              </div>
-
-              {/* User info */}
-              <div className='text-left min-w-0 flex-1 cursor-pointer'>
-                <div className='font-medium truncate text-base-content text-sm cursor-pointer'>{user.fullname}</div>
-                <div className='text-xs text-zinc-400 cursor-pointer flex items-center gap-1.5 mt-0.5'>
-                  <span className={`size-1.5 rounded-full ${isOnline ? "bg-green-500" : "bg-zinc-500"}`} />
-                  {isOnline ? "Online" : "Offline"}
-                </div>
-              </div>
-            </button>
+              user={user}
+              isOnline={isOnline}
+              isSelected={selectedUser?._id === user._id}
+              onSelect={setSelectedUser}
+            />
           );
         })}
 
         {sortedAndFilteredUsers.length === 0 && (
-          <div className='text-center text-xs text-base-content/50 py-8 px-4'>
+          <div className='text-center text-xs text-base-content/50 py-12 px-4'>
             {searchQuery ? `No contacts matching "${searchQuery}"` : "No contacts found"}
           </div>
         )}
