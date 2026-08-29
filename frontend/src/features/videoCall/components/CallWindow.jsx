@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import RemoteVideo from './RemoteVideo.jsx';
-import LocalVideo from './LocalVideo.jsx';
+import DraggableLocalVideo from './DraggableLocalVideo.jsx';
 import CallControls from './CallControls.jsx';
 import { CALL_STATUS } from '../utils/videoCallConstants.js';
 import { PhoneOff } from 'lucide-react';
@@ -26,12 +26,14 @@ const CallWindow = ({
     onEndCall,
     onCancelCall,
 }) => {
+    const containerRef = useRef(null);
+
     const isCallingOrRinging = callState === CALL_STATUS.CALLING || callState === CALL_STATUS.RINGING;
     const isConnecting = callState === CALL_STATUS.CONNECTING;
     const isConnected = callState === CALL_STATUS.CONNECTED;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950 text-white overflow-hidden animate-fade-in">
+        <div ref={containerRef} className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950 text-white overflow-hidden animate-fade-in select-none">
             {/* Main Remote Video Container */}
             <RemoteVideo
                 stream={remoteStream}
@@ -65,15 +67,14 @@ const CallWindow = ({
                 </div>
             </div>
 
-            {/* Local Video PIP Preview */}
-            <div className="absolute bottom-28 right-6 z-20 w-36 h-48 md:w-48 md:h-64 shadow-2xl">
-                <LocalVideo
-                    stream={localStream}
-                    isVideoOff={isVideoOff}
-                    isMuted={isMuted}
-                    className="w-full h-full"
-                />
-            </div>
+            {/* Draggable Local Video Preview Container */}
+            <DraggableLocalVideo
+                stream={localStream}
+                isVideoOff={isVideoOff}
+                isMuted={isMuted}
+                containerRef={containerRef}
+                className="w-36 h-48 md:w-48 md:h-64"
+            />
 
             {/* Outgoing Call / Connecting Overlay */}
             {isCallingOrRinging && (
