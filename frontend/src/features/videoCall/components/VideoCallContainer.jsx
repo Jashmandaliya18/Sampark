@@ -15,6 +15,8 @@ const VideoCallContainer = () => {
         remoteStream,
         isMuted,
         isVideoOff,
+        peerIsMuted,
+        peerIsVideoOff,
         callDuration,
         acceptCall,
         rejectCall,
@@ -59,6 +61,8 @@ const VideoCallContainer = () => {
                     remoteStream={remoteStream}
                     isMuted={isMuted}
                     isVideoOff={isVideoOff}
+                    peerIsMuted={peerIsMuted}
+                    peerIsVideoOff={peerIsVideoOff}
                     callDuration={callDuration}
                     onToggleMic={toggleMic}
                     onToggleCamera={toggleCamera}

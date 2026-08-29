@@ -18,6 +18,8 @@ const CallWindow = ({
     remoteStream,
     isMuted,
     isVideoOff,
+    peerIsMuted,
+    peerIsVideoOff,
     callDuration,
     onToggleMic,
     onToggleCamera,
@@ -35,6 +37,8 @@ const CallWindow = ({
                 stream={remoteStream}
                 peerName={peerUser?.fullname || 'Remote Participant'}
                 peerAvatar={peerUser?.profilePic || ''}
+                peerIsMuted={peerIsMuted}
+                peerIsVideoOff={peerIsVideoOff}
                 className="w-full h-full"
             />
 
@@ -66,6 +70,7 @@ const CallWindow = ({
                 <LocalVideo
                     stream={localStream}
                     isVideoOff={isVideoOff}
+                    isMuted={isMuted}
                     className="w-full h-full"
                 />
             </div>

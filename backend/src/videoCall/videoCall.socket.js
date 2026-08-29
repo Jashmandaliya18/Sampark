@@ -167,6 +167,22 @@ export const registerVideoCallHandlers = (io, socket) => {
         });
     });
 
+    // Forward Media State Toggle (Mic / Camera toggle)
+    socket.on(VIDEO_CALL_EVENTS.MEDIA_STATE_TOGGLE, (data) => {
+        const { callId, targetId, isMuted, isVideoOff } = data || {};
+        if (!targetId) return;
+
+        const peerSockets = getReceiverSocketId(String(targetId));
+        peerSockets.forEach((sId) => {
+            io.to(sId).emit(VIDEO_CALL_EVENTS.MEDIA_STATE_TOGGLE, {
+                callId,
+                senderId: currentUserId,
+                isMuted,
+                isVideoOff,
+            });
+        });
+    });
+
     // End Call (by either participant)
     socket.on(VIDEO_CALL_EVENTS.END, (data) => {
         const { callId, targetId } = data || {};

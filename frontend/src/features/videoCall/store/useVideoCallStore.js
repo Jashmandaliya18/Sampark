@@ -15,6 +15,8 @@ export const useVideoCallStore = create((set, get) => ({
     remoteStream: null,
     isMuted: false,
     isVideoOff: false,
+    peerIsMuted: false,
+    peerIsVideoOff: false,
     callDuration: 0,
     errorMessage: null,
     isSubscribed: false,
@@ -33,6 +35,22 @@ export const useVideoCallStore = create((set, get) => ({
             timerInterval = null;
         }
         set({ callDuration: 0 });
+    },
+
+    emitMediaState: (newMuteState, newVideoState) => {
+        const { callId, caller, receiver } = get();
+        const authUser = useAuthStore.getState().authUser;
+        const socket = useAuthStore.getState().socket;
+        const peer = authUser?._id === caller?._id ? receiver : caller;
+
+        if (socket && callId && peer) {
+            socket.emit(VIDEO_CALL_EVENTS.MEDIA_STATE_TOGGLE, {
+                callId,
+                targetId: peer._id,
+                isMuted: newMuteState !== undefined ? newMuteState : get().isMuted,
+                isVideoOff: newVideoState !== undefined ? newVideoState : get().isVideoOff,
+            });
+        }
     },
 
     initiateCall: async (targetUser) => {
@@ -59,6 +77,8 @@ export const useVideoCallStore = create((set, get) => ({
             errorMessage: null,
             isMuted: false,
             isVideoOff: false,
+            peerIsMuted: false,
+            peerIsVideoOff: false,
         });
 
         try {
@@ -103,6 +123,7 @@ export const useVideoCallStore = create((set, get) => ({
                     if (state === 'connected') {
                         set({ callState: CALL_STATUS.CONNECTED });
                         get().startTimer();
+                        get().emitMediaState(get().isMuted, get().isVideoOff);
                     } else if (state === 'failed' || state === 'closed') {
                         get().endCall();
                     }
@@ -168,12 +189,14 @@ export const useVideoCallStore = create((set, get) => ({
         const newMuteState = !get().isMuted;
         webRTCService.toggleAudio(!newMuteState);
         set({ isMuted: newMuteState });
+        get().emitMediaState(newMuteState, get().isVideoOff);
     },
 
     toggleCamera: () => {
         const newVideoState = !get().isVideoOff;
         webRTCService.toggleVideo(!newVideoState);
         set({ isVideoOff: newVideoState });
+        get().emitMediaState(get().isMuted, newVideoState);
     },
 
     resetCallState: () => {
@@ -189,6 +212,8 @@ export const useVideoCallStore = create((set, get) => ({
             remoteStream: null,
             isMuted: false,
             isVideoOff: false,
+            peerIsMuted: false,
+            peerIsVideoOff: false,
             errorMessage: null,
         });
     },
@@ -214,6 +239,8 @@ export const useVideoCallStore = create((set, get) => ({
                 caller,
                 receiver: authUser,
                 errorMessage: null,
+                peerIsMuted: false,
+                peerIsVideoOff: false,
             });
         });
 
@@ -237,6 +264,7 @@ export const useVideoCallStore = create((set, get) => ({
                         if (state === 'connected') {
                             set({ callState: CALL_STATUS.CONNECTED });
                             get().startTimer();
+                            get().emitMediaState(get().isMuted, get().isVideoOff);
                         } else if (state === 'failed' || state === 'closed') {
                             get().endCall();
                         }
@@ -287,6 +315,14 @@ export const useVideoCallStore = create((set, get) => ({
             if (candidate) {
                 await webRTCService.addIceCandidate(candidate);
             }
+        });
+
+        // Peer Media State Toggle (Mic / Camera toggle)
+        socket.on(VIDEO_CALL_EVENTS.MEDIA_STATE_TOGGLE, ({ isMuted, isVideoOff }) => {
+            set({
+                peerIsMuted: isMuted,
+                peerIsVideoOff: isVideoOff,
+            });
         });
 
         // Call Rejected
