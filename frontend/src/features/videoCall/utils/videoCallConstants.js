@@ -10,6 +10,7 @@ export const VIDEO_CALL_EVENTS = {
     BUSY: 'video-call:busy',
     ERROR: 'video-call:error',
     MEDIA_STATE_TOGGLE: 'video-call:media-state-toggle',
+    SCREEN_SHARE_TOGGLE: 'video-call:screen-share-toggle',
 };
 
 export const CALL_STATUS = {

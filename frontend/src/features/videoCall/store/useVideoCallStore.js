@@ -17,6 +17,9 @@ export const useVideoCallStore = create((set, get) => ({
     isVideoOff: false,
     peerIsMuted: false,
     peerIsVideoOff: false,
+    isScreenSharing: false,
+    peerIsScreenSharing: false,
+    screenStream: null,
     callDuration: 0,
     errorMessage: null,
     isSubscribed: false,
@@ -49,6 +52,21 @@ export const useVideoCallStore = create((set, get) => ({
                 targetId: peer._id,
                 isMuted: newMuteState !== undefined ? newMuteState : get().isMuted,
                 isVideoOff: newVideoState !== undefined ? newVideoState : get().isVideoOff,
+            });
+        }
+    },
+
+    emitScreenShareState: (isSharing) => {
+        const { callId, caller, receiver } = get();
+        const authUser = useAuthStore.getState().authUser;
+        const socket = useAuthStore.getState().socket;
+        const peer = authUser?._id === caller?._id ? receiver : caller;
+
+        if (socket && callId && peer) {
+            socket.emit(VIDEO_CALL_EVENTS.SCREEN_SHARE_TOGGLE, {
+                callId,
+                targetId: peer._id,
+                isSharing,
             });
         }
     },
@@ -199,6 +217,71 @@ export const useVideoCallStore = create((set, get) => ({
         get().emitMediaState(get().isMuted, newVideoState);
     },
 
+    startScreenShare: async () => {
+        if (get().isScreenSharing) return;
+
+        if (get().peerIsScreenSharing) {
+            toast.error('The other participant is currently sharing their screen.');
+            return;
+        }
+
+        try {
+            const { screenStream, hasAudio } = await webRTCService.startScreenShare({
+                onEnded: () => {
+                    get().stopScreenShare();
+                },
+            });
+
+            set({
+                isScreenSharing: true,
+                screenStream,
+            });
+
+            get().emitScreenShareState(true);
+
+            if (hasAudio) {
+                toast.success('Sharing screen with audio', { icon: '🖥️' });
+            } else {
+                toast('Sharing screen (video only)', { icon: '🖥️' });
+            }
+        } catch (error) {
+            console.error('Error starting screen share:', error);
+            const isUserDismissal =
+                error?.name === 'NotAllowedError' ||
+                error?.name === 'AbortError' ||
+                error?.name === 'PermissionDeniedError' ||
+                error?.message?.toLowerCase().includes('denied') ||
+                error?.message?.toLowerCase().includes('dismissed') ||
+                error?.message?.toLowerCase().includes('canceled') ||
+                error?.message?.toLowerCase().includes('cancelled');
+
+            if (isUserDismissal) {
+                // User dismissed or cancelled the screen-selection dialog - call continues normally
+                toast('Screen sharing cancelled', { icon: 'ℹ️' });
+            } else {
+                toast.error(error?.message || 'Failed to start screen sharing.');
+            }
+        }
+    },
+
+    stopScreenShare: async () => {
+        if (!get().isScreenSharing) return;
+
+        try {
+            await webRTCService.stopScreenShare();
+        } catch (error) {
+            console.error('Error stopping screen share:', error);
+        }
+
+        set({
+            isScreenSharing: false,
+            screenStream: null,
+        });
+
+        get().emitScreenShareState(false);
+        toast('Screen sharing stopped', { icon: '🖥️' });
+    },
+
     resetCallState: () => {
         get().stopTimer();
         webRTCService.cleanup();
@@ -214,6 +297,9 @@ export const useVideoCallStore = create((set, get) => ({
             isVideoOff: false,
             peerIsMuted: false,
             peerIsVideoOff: false,
+            isScreenSharing: false,
+            peerIsScreenSharing: false,
+            screenStream: null,
             errorMessage: null,
         });
     },
@@ -323,6 +409,16 @@ export const useVideoCallStore = create((set, get) => ({
                 peerIsMuted: isMuted,
                 peerIsVideoOff: isVideoOff,
             });
+        });
+
+        // Peer Screen Share Toggle
+        socket.on(VIDEO_CALL_EVENTS.SCREEN_SHARE_TOGGLE, ({ isSharing }) => {
+            set({ peerIsScreenSharing: !!isSharing });
+            if (isSharing) {
+                toast('Participant started sharing their screen', { icon: '🖥️' });
+            } else {
+                toast('Participant stopped sharing their screen', { icon: '🖥️' });
+            }
         });
 
         // Call Rejected

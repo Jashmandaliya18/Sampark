@@ -13,10 +13,13 @@ const VideoCallContainer = () => {
         receiver,
         localStream,
         remoteStream,
+        screenStream,
         isMuted,
         isVideoOff,
         peerIsMuted,
         peerIsVideoOff,
+        isScreenSharing,
+        peerIsScreenSharing,
         callDuration,
         acceptCall,
         rejectCall,
@@ -24,6 +27,8 @@ const VideoCallContainer = () => {
         endCall,
         toggleMic,
         toggleCamera,
+        startScreenShare,
+        stopScreenShare,
         subscribeToVideoCallSocket,
         unsubscribeFromVideoCallSocket,
     } = useVideoCallStore();
@@ -45,6 +50,14 @@ const VideoCallContainer = () => {
     const isIncomingCall = callState === CALL_STATUS.RINGING && authUser._id === receiver?._id;
     const peerUser = authUser._id === caller?._id ? receiver : caller;
 
+    const handleToggleScreenShare = () => {
+        if (isScreenSharing) {
+            stopScreenShare();
+        } else {
+            startScreenShare();
+        }
+    };
+
     return (
         <>
             {isIncomingCall ? (
@@ -59,13 +72,17 @@ const VideoCallContainer = () => {
                     peerUser={peerUser}
                     localStream={localStream}
                     remoteStream={remoteStream}
+                    screenStream={screenStream}
                     isMuted={isMuted}
                     isVideoOff={isVideoOff}
                     peerIsMuted={peerIsMuted}
                     peerIsVideoOff={peerIsVideoOff}
+                    isScreenSharing={isScreenSharing}
+                    peerIsScreenSharing={peerIsScreenSharing}
                     callDuration={callDuration}
                     onToggleMic={toggleMic}
                     onToggleCamera={toggleCamera}
+                    onToggleScreenShare={handleToggleScreenShare}
                     onEndCall={endCall}
                     onCancelCall={cancelCall}
                 />

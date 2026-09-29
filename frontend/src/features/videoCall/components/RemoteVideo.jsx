@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { User, VideoOff } from 'lucide-react';
+import { User, VideoOff, ScreenShare } from 'lucide-react';
 
 const RemoteVideo = ({
     stream,
     peerName = 'Remote User',
     peerAvatar = '',
     peerIsVideoOff = false,
+    peerIsScreenSharing = false,
     className = '',
 }) => {
     const videoRef = useRef(null);
@@ -13,10 +14,13 @@ const RemoteVideo = ({
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
+            videoRef.current.play().catch((err) => {
+                console.warn('Remote video playback error:', err);
+            });
         }
-    }, [stream, peerIsVideoOff]);
+    }, [stream, peerIsVideoOff, peerIsScreenSharing]);
 
-    const isCameraOn = stream && !peerIsVideoOff;
+    const isDisplayingVideo = stream && (!peerIsVideoOff || peerIsScreenSharing);
 
     return (
         <div className={`relative overflow-hidden bg-zinc-950 flex items-center justify-center ${className}`}>
@@ -24,10 +28,20 @@ const RemoteVideo = ({
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className={`w-full h-full object-cover transition-opacity duration-300 ${isCameraOn ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full transition-all duration-300 ${
+                    peerIsScreenSharing ? 'object-contain bg-black' : 'object-cover'
+                } ${isDisplayingVideo ? 'opacity-100' : 'opacity-0'}`}
             />
 
-            {!isCameraOn && (
+            {/* Peer Screen Sharing Badge */}
+            {peerIsScreenSharing && isDisplayingVideo && (
+                <div className="absolute top-20 left-4 sm:left-6 flex items-center gap-2 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-medium text-white border border-white/10 shadow-lg pointer-events-none z-10 animate-fade-in">
+                    <ScreenShare size={14} className="text-primary" />
+                    <span>{peerName}&apos;s Screen</span>
+                </div>
+            )}
+
+            {!isDisplayingVideo && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900 to-zinc-950 text-white p-6">
                     <div className="avatar mb-4 relative">
                         <div className="w-28 h-28 rounded-full ring-4 ring-primary/40 shadow-2xl overflow-hidden bg-base-300 flex items-center justify-center">

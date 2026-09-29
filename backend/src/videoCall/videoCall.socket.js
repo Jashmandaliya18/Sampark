@@ -183,6 +183,21 @@ export const registerVideoCallHandlers = (io, socket) => {
         });
     });
 
+    // Forward Screen Share State Toggle
+    socket.on(VIDEO_CALL_EVENTS.SCREEN_SHARE_TOGGLE, (data) => {
+        const { callId, targetId, isSharing } = data || {};
+        if (!targetId) return;
+
+        const peerSockets = getReceiverSocketId(String(targetId));
+        peerSockets.forEach((sId) => {
+            io.to(sId).emit(VIDEO_CALL_EVENTS.SCREEN_SHARE_TOGGLE, {
+                callId,
+                senderId: currentUserId,
+                isSharing,
+            });
+        });
+    });
+
     // End Call (by either participant)
     socket.on(VIDEO_CALL_EVENTS.END, (data) => {
         const { callId, targetId } = data || {};

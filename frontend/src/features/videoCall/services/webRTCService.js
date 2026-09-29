@@ -11,6 +11,15 @@ class WebRTCService {
         this.onIceCandidateCallback = null;
         this.onRemoteStreamCallback = null;
         this.onConnectionStateCallback = null;
+
+        // Screen share & audio mixing state
+        this.screenStream = null;
+        this.audioContext = null;
+        this.audioDestination = null;
+        this.micGainNode = null;
+        this.screenAudioSource = null;
+        this.micAudioSource = null;
+        this.onScreenShareEndedCallback = null;
     }
 
     async getLocalStream(constraints = { audio: true, video: true }) {
@@ -160,11 +169,203 @@ class WebRTCService {
         }
     }
 
+    getVideoSender() {
+        if (!this.peerConnection) return null;
+        const senders = this.peerConnection.getSenders();
+        return (
+            senders.find((s) => s.track && s.track.kind === 'video') ||
+            senders.find((s) => {
+                const trans = this.peerConnection.getTransceivers?.().find((t) => t.sender === s);
+                return trans?.receiver?.track?.kind === 'video';
+            }) ||
+            senders.find((s) => s.track === null)
+        );
+    }
+
+    getAudioSender() {
+        if (!this.peerConnection) return null;
+        const senders = this.peerConnection.getSenders();
+        return (
+            senders.find((s) => s.track && s.track.kind === 'audio') ||
+            senders.find((s) => {
+                const trans = this.peerConnection.getTransceivers?.().find((t) => t.sender === s);
+                return trans?.receiver?.track?.kind === 'audio';
+            }) ||
+            senders.find((s) => s.track === null)
+        );
+    }
+
+    async startScreenShare({ onEnded } = {}) {
+        if (!navigator?.mediaDevices?.getDisplayMedia) {
+            throw new Error('Screen sharing is not supported by your browser or device.');
+        }
+
+        // Stop any previously running screen sharing instance cleanly
+        if (this.screenStream) {
+            await this.stopScreenShare();
+        }
+
+        let displayStream = null;
+        try {
+            // Request both video and audio. Modern browsers allow tab/screen audio capture.
+            displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    cursor: 'always',
+                },
+                audio: true,
+            });
+        } catch (err) {
+            // Fallback for browsers that fail complex constraint objects
+            if (err.name === 'TypeError' || err.name === 'ConstraintNotSatisfiedError') {
+                displayStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                });
+            } else {
+                throw err;
+            }
+        }
+
+        this.screenStream = displayStream;
+        const screenVideoTrack = displayStream.getVideoTracks()[0];
+        if (!screenVideoTrack) {
+            throw new Error('No video track found in screen-sharing stream.');
+        }
+
+        // Set up callback when user stops sharing via browser native UI or tab close
+        this.onScreenShareEndedCallback = onEnded;
+        screenVideoTrack.onended = () => {
+            if (this.onScreenShareEndedCallback) {
+                this.onScreenShareEndedCallback();
+            }
+        };
+
+        // Replace outgoing video track on existing peer connection
+        const videoSender = this.getVideoSender();
+        if (videoSender) {
+            await videoSender.replaceTrack(screenVideoTrack);
+        } else {
+            console.warn('No video sender found on peer connection to replace track.');
+        }
+
+        // Handle Screen Audio (Mix screen audio with local microphone)
+        const screenAudioTracks = displayStream.getAudioTracks();
+        const hasAudio = screenAudioTracks.length > 0;
+        const micTrack = this.localStream?.getAudioTracks()?.[0];
+
+        if (hasAudio && micTrack) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    this.audioContext = new AudioCtx();
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+
+                    this.audioDestination = this.audioContext.createMediaStreamDestination();
+
+                    // Screen audio source node
+                    const screenAudioTrack = screenAudioTracks[0];
+                    this.screenAudioSource = this.audioContext.createMediaStreamSource(
+                        new MediaStream([screenAudioTrack])
+                    );
+                    this.screenAudioSource.connect(this.audioDestination);
+
+                    // Microphone source node with gain control for muting
+                    this.micAudioSource = this.audioContext.createMediaStreamSource(
+                        new MediaStream([micTrack])
+                    );
+                    this.micGainNode = this.audioContext.createGain();
+                    this.micGainNode.gain.value = micTrack.enabled ? 1 : 0;
+                    this.micAudioSource.connect(this.micGainNode);
+                    this.micGainNode.connect(this.audioDestination);
+
+                    // Replace outgoing WebRTC audio sender with mixed audio track
+                    const mixedAudioTrack = this.audioDestination.stream.getAudioTracks()[0];
+                    const audioSender = this.getAudioSender();
+                    if (audioSender && mixedAudioTrack) {
+                        await audioSender.replaceTrack(mixedAudioTrack);
+                    }
+                }
+            } catch (audioErr) {
+                console.warn('Could not mix screen audio with microphone, continuing with mic only:', audioErr);
+            }
+        }
+
+        return {
+            screenStream: this.screenStream,
+            hasAudio,
+        };
+    }
+
+    async stopScreenShare() {
+        // 1. Restore camera video track on peer connection
+        const videoSender = this.getVideoSender();
+        const cameraTrack = this.localStream?.getVideoTracks()?.[0];
+        if (videoSender && cameraTrack) {
+            try {
+                await videoSender.replaceTrack(cameraTrack);
+            } catch (err) {
+                console.error('Error restoring camera track to peer connection:', err);
+            }
+        }
+
+        // 2. Restore original microphone track on peer connection
+        const audioSender = this.getAudioSender();
+        const micTrack = this.localStream?.getAudioTracks()?.[0];
+        if (audioSender && micTrack) {
+            try {
+                await audioSender.replaceTrack(micTrack);
+            } catch (err) {
+                console.error('Error restoring microphone track to peer connection:', err);
+            }
+        }
+
+        // 3. Clean up Web Audio mixing context and nodes
+        if (this.audioContext) {
+            try {
+                if (this.audioContext.state !== 'closed') {
+                    await this.audioContext.close();
+                }
+            } catch (e) {
+                console.error('Error closing audioContext:', e);
+            }
+            this.audioContext = null;
+            this.audioDestination = null;
+            this.screenAudioSource = null;
+            this.micAudioSource = null;
+            this.micGainNode = null;
+        }
+
+        // 4. Clean up screen stream tracks and listener
+        if (this.screenStream) {
+            this.screenStream.getTracks().forEach((track) => {
+                try {
+                    track.onended = null;
+                    track.stop();
+                } catch (e) {
+                    console.error('Error stopping screen track:', e);
+                }
+            });
+            this.screenStream = null;
+        }
+
+        this.onScreenShareEndedCallback = null;
+    }
+
     toggleAudio(enabled) {
         if (this.localStream) {
             this.localStream.getAudioTracks().forEach((track) => {
                 track.enabled = enabled;
             });
+        }
+
+        // If screen sharing audio mixer is active, adjust mic gain node
+        if (this.micGainNode && this.audioContext) {
+            try {
+                this.micGainNode.gain.setValueAtTime(enabled ? 1 : 0, this.audioContext.currentTime);
+            } catch (e) {
+                console.error('Error updating mic gain during screen share:', e);
+            }
         }
     }
 
@@ -192,6 +393,33 @@ class WebRTCService {
     }
 
     cleanup() {
+        // Stop screen sharing tracks and audio mixer
+        if (this.screenStream) {
+            this.screenStream.getTracks().forEach((track) => {
+                try {
+                    track.onended = null;
+                    track.stop();
+                } catch (e) {
+                    console.error('Error stopping screen track in cleanup:', e);
+                }
+            });
+            this.screenStream = null;
+        }
+
+        if (this.audioContext) {
+            try {
+                if (this.audioContext.state !== 'closed') {
+                    this.audioContext.close().catch(() => {});
+                }
+            } catch (e) {}
+            this.audioContext = null;
+            this.audioDestination = null;
+            this.screenAudioSource = null;
+            this.micAudioSource = null;
+            this.micGainNode = null;
+        }
+        this.onScreenShareEndedCallback = null;
+
         if (this.localStream) {
             this.localStream.getTracks().forEach((track) => {
                 try {
