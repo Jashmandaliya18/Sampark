@@ -27,6 +27,12 @@ app.use(cors({
     credentials: true,
 }));
 
+// Ensure Permissions-Policy allows display-capture across all contexts and embedding
+app.use((req, res, next) => {
+    res.setHeader('Permissions-Policy', 'display-capture=*');
+    next();
+});
+
 app.use("/api/auth", authRoutes)
 app.use("/api/messages", messageRoutes)
 

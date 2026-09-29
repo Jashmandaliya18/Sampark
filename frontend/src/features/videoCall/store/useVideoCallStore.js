@@ -245,22 +245,73 @@ export const useVideoCallStore = create((set, get) => ({
                 toast('Sharing screen (video only)', { icon: '🖥️' });
             }
         } catch (error) {
-            console.error('Error starting screen share:', error);
+            console.error('Screen share error details:', {
+                name: error?.name,
+                code: error?.code,
+                message: error?.message,
+                stack: error?.stack,
+            });
+
+            const errCode = error?.code || error?.message;
+            const errName = error?.name || '';
+            const msgLower = (error?.message || '').toLowerCase();
+
+            // 1. User intentionally cancelled or dismissed the screen-selection dialog
             const isUserDismissal =
-                error?.name === 'NotAllowedError' ||
-                error?.name === 'AbortError' ||
-                error?.name === 'PermissionDeniedError' ||
-                error?.message?.toLowerCase().includes('denied') ||
-                error?.message?.toLowerCase().includes('dismissed') ||
-                error?.message?.toLowerCase().includes('canceled') ||
-                error?.message?.toLowerCase().includes('cancelled');
+                errName === 'AbortError' ||
+                msgLower.includes('cancel') ||
+                msgLower.includes('dismiss') ||
+                (errName === 'NotAllowedError' && msgLower.includes('denied by system'));
 
             if (isUserDismissal) {
-                // User dismissed or cancelled the screen-selection dialog - call continues normally
                 toast('Screen sharing cancelled', { icon: 'ℹ️' });
-            } else {
-                toast.error(error?.message || 'Failed to start screen sharing.');
+                return;
             }
+
+            // 2. Mobile browser limitation (e.g. Brave or Chrome on Android, iOS Safari)
+            if (errCode === 'MOBILE_NOT_SUPPORTED') {
+                toast.error(
+                    'Screen sharing is not supported by mobile web browsers (such as Brave or Chrome on Android). Please use Chrome, Edge, or Brave on a desktop computer.',
+                    { duration: 6000 }
+                );
+                return;
+            }
+
+            // 3. Insecure Context (HTTP instead of HTTPS)
+            if (errCode === 'INSECURE_CONTEXT') {
+                toast.error('Screen sharing requires a secure HTTPS connection.', { duration: 5000 });
+                return;
+            }
+
+            // 4. Desktop browser unsupported
+            if (errCode === 'BROWSER_NOT_SUPPORTED') {
+                toast.error(
+                    'Screen sharing is not supported by this browser. Please try Chrome, Edge, or Firefox on Desktop.',
+                    { duration: 5000 }
+                );
+                return;
+            }
+
+            // 5. User denied permission in browser prompt
+            if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError' || msgLower.includes('permission denied')) {
+                toast.error(
+                    'Screen sharing permission was denied. Please allow screen sharing in your browser and try again.',
+                    { duration: 5000 }
+                );
+                return;
+            }
+
+            // 6. OS / Security restrictions (e.g. macOS system permissions or policy restriction)
+            if (errName === 'NotSupportedError' || errName === 'SecurityError') {
+                toast.error(
+                    'This browser or operating system does not allow screen sharing. Please try a supported desktop browser.',
+                    { duration: 5000 }
+                );
+                return;
+            }
+
+            // 7. Generic fallback error
+            toast.error(error?.message || 'Failed to start screen sharing.');
         }
     },
 

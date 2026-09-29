@@ -1,5 +1,26 @@
 import { RTC_CONFIGURATION } from '../utils/videoCallConstants.js';
 
+export const getScreenShareCapability = () => {
+    const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
+    const hasMediaDevices = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices);
+    const hasGetDisplayMedia =
+        (hasMediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') ||
+        (typeof navigator !== 'undefined' && typeof navigator.getDisplayMedia === 'function');
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isAndroid = /Android/i.test(userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+    const isMobile = isAndroid || isIOS || /Mobile/i.test(userAgent);
+
+    return {
+        isSupported: Boolean(hasGetDisplayMedia),
+        isSecure,
+        isMobile,
+        isAndroid,
+        isIOS,
+        userAgent,
+    };
+};
+
 class WebRTCService {
     constructor() {
         this.peerConnection = null;
@@ -196,8 +217,34 @@ class WebRTCService {
     }
 
     async startScreenShare({ onEnded } = {}) {
-        if (!navigator?.mediaDevices?.getDisplayMedia) {
-            throw new Error('Screen sharing is not supported by your browser or device.');
+        const getDisplayMediaFn =
+            (navigator?.mediaDevices &&
+                typeof navigator.mediaDevices.getDisplayMedia === 'function' &&
+                navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices)) ||
+            (typeof navigator !== 'undefined' &&
+                typeof navigator.getDisplayMedia === 'function' &&
+                navigator.getDisplayMedia.bind(navigator)) ||
+            null;
+
+        if (!getDisplayMediaFn) {
+            const diag = getScreenShareCapability();
+            console.warn('Screen share capability check failed:', diag);
+
+            if (!diag.isSecure) {
+                const err = new Error('INSECURE_CONTEXT');
+                err.code = 'INSECURE_CONTEXT';
+                throw err;
+            }
+
+            if (diag.isMobile) {
+                const err = new Error('MOBILE_NOT_SUPPORTED');
+                err.code = 'MOBILE_NOT_SUPPORTED';
+                throw err;
+            }
+
+            const err = new Error('BROWSER_NOT_SUPPORTED');
+            err.code = 'BROWSER_NOT_SUPPORTED';
+            throw err;
         }
 
         // Stop any previously running screen sharing instance cleanly
@@ -206,23 +253,47 @@ class WebRTCService {
         }
 
         let displayStream = null;
+        let capturedError = null;
+
+        // Primary attempt: standard audio + video
         try {
-            // Request both video and audio. Modern browsers allow tab/screen audio capture.
-            displayStream = await navigator.mediaDevices.getDisplayMedia({
-                video: {
-                    cursor: 'always',
-                },
+            displayStream = await getDisplayMediaFn({
+                video: true,
                 audio: true,
             });
         } catch (err) {
-            // Fallback for browsers that fail complex constraint objects
-            if (err.name === 'TypeError' || err.name === 'ConstraintNotSatisfiedError') {
-                displayStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                });
-            } else {
-                throw err;
+            capturedError = err;
+            console.warn('Initial getDisplayMedia with audio failed:', {
+                name: err?.name,
+                message: err?.message,
+            });
+
+            const isUserDismissal =
+                err?.name === 'AbortError' ||
+                (err?.name === 'NotAllowedError' &&
+                    (err?.message?.toLowerCase().includes('cancel') ||
+                        err?.message?.toLowerCase().includes('dismiss') ||
+                        err?.message?.toLowerCase().includes('denied by system')));
+
+            // If not explicitly dismissed by user, try video-only fallback
+            if (!isUserDismissal) {
+                try {
+                    displayStream = await getDisplayMediaFn({
+                        video: true,
+                    });
+                    capturedError = null;
+                } catch (videoOnlyErr) {
+                    capturedError = videoOnlyErr;
+                    console.warn('Fallback video-only getDisplayMedia also failed:', {
+                        name: videoOnlyErr?.name,
+                        message: videoOnlyErr?.message,
+                    });
+                }
             }
+        }
+
+        if (!displayStream) {
+            throw capturedError || new Error('FAILED_TO_CAPTURE_SCREEN');
         }
 
         this.screenStream = displayStream;
