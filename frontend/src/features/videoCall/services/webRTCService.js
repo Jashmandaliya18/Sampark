@@ -1,26 +1,5 @@
 import { RTC_CONFIGURATION } from '../utils/videoCallConstants.js';
 
-export const getScreenShareCapability = () => {
-    const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
-    const hasMediaDevices = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices);
-    const hasGetDisplayMedia =
-        (hasMediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') ||
-        (typeof navigator !== 'undefined' && typeof navigator.getDisplayMedia === 'function');
-    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-    const isAndroid = /Android/i.test(userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-    const isMobile = isAndroid || isIOS || /Mobile/i.test(userAgent);
-
-    return {
-        isSupported: Boolean(hasGetDisplayMedia),
-        isSecure,
-        isMobile,
-        isAndroid,
-        isIOS,
-        userAgent,
-    };
-};
-
 class WebRTCService {
     constructor() {
         this.peerConnection = null;
@@ -217,33 +196,16 @@ class WebRTCService {
     }
 
     async startScreenShare({ onEnded } = {}) {
-        const getDisplayMediaFn =
-            (navigator?.mediaDevices &&
-                typeof navigator.mediaDevices.getDisplayMedia === 'function' &&
-                navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices)) ||
-            (typeof navigator !== 'undefined' &&
-                typeof navigator.getDisplayMedia === 'function' &&
-                navigator.getDisplayMedia.bind(navigator)) ||
-            null;
+        console.log("Screen sharing support:", {
+            mediaDevices: !!navigator.mediaDevices,
+            getDisplayMedia:
+                typeof navigator.mediaDevices?.getDisplayMedia,
+            userAgent: navigator.userAgent
+        });
 
-        if (!getDisplayMediaFn) {
-            const diag = getScreenShareCapability();
-            console.warn('Screen share capability check failed:', diag);
-
-            if (!diag.isSecure) {
-                const err = new Error('INSECURE_CONTEXT');
-                err.code = 'INSECURE_CONTEXT';
-                throw err;
-            }
-
-            if (diag.isMobile) {
-                const err = new Error('MOBILE_NOT_SUPPORTED');
-                err.code = 'MOBILE_NOT_SUPPORTED';
-                throw err;
-            }
-
-            const err = new Error('BROWSER_NOT_SUPPORTED');
-            err.code = 'BROWSER_NOT_SUPPORTED';
+        if (!navigator?.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            const err = new Error("NOT_SUPPORTED");
+            err.name = "NotSupportedError";
             throw err;
         }
 
@@ -252,54 +214,15 @@ class WebRTCService {
             await this.stopScreenShare();
         }
 
-        let displayStream = null;
-        let capturedError = null;
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false
+        });
 
-        // Primary attempt: standard audio + video
-        try {
-            displayStream = await getDisplayMediaFn({
-                video: true,
-                audio: true,
-            });
-        } catch (err) {
-            capturedError = err;
-            console.warn('Initial getDisplayMedia with audio failed:', {
-                name: err?.name,
-                message: err?.message,
-            });
-
-            const isUserDismissal =
-                err?.name === 'AbortError' ||
-                (err?.name === 'NotAllowedError' &&
-                    (err?.message?.toLowerCase().includes('cancel') ||
-                        err?.message?.toLowerCase().includes('dismiss') ||
-                        err?.message?.toLowerCase().includes('denied by system')));
-
-            // If not explicitly dismissed by user, try video-only fallback
-            if (!isUserDismissal) {
-                try {
-                    displayStream = await getDisplayMediaFn({
-                        video: true,
-                    });
-                    capturedError = null;
-                } catch (videoOnlyErr) {
-                    capturedError = videoOnlyErr;
-                    console.warn('Fallback video-only getDisplayMedia also failed:', {
-                        name: videoOnlyErr?.name,
-                        message: videoOnlyErr?.message,
-                    });
-                }
-            }
-        }
-
-        if (!displayStream) {
-            throw capturedError || new Error('FAILED_TO_CAPTURE_SCREEN');
-        }
-
-        this.screenStream = displayStream;
-        const screenVideoTrack = displayStream.getVideoTracks()[0];
+        this.screenStream = screenStream;
+        const screenVideoTrack = screenStream.getVideoTracks()[0];
         if (!screenVideoTrack) {
-            throw new Error('No video track found in screen-sharing stream.');
+            throw new Error("No video track found in screen-sharing stream.");
         }
 
         // Set up callback when user stops sharing via browser native UI or tab close
@@ -315,11 +238,11 @@ class WebRTCService {
         if (videoSender) {
             await videoSender.replaceTrack(screenVideoTrack);
         } else {
-            console.warn('No video sender found on peer connection to replace track.');
+            console.warn("No video sender found on peer connection to replace track.");
         }
 
         // Handle Screen Audio (Mix screen audio with local microphone)
-        const screenAudioTracks = displayStream.getAudioTracks();
+        const screenAudioTracks = screenStream.getAudioTracks();
         const hasAudio = screenAudioTracks.length > 0;
         const micTrack = this.localStream?.getAudioTracks()?.[0];
 
